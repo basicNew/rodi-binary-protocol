@@ -50,17 +50,19 @@
 #define COMMAND_GET_LEFT_IR    2
 #define COMMAND_GET_RIGHT_IR   3
 #define COMMAND_GET_SONAR      4
-#define COMMAND_GET_BATTERY    5
+// In the TODO list:
+// #define COMMAND_GET_BATTERY    5
 
 // 51-100: Use an actuator
 #define COMMAND_TURN_LEAD_ON  51
-#define COMMAND_TURN_LEAD_OFF 22
+#define COMMAND_TURN_LEAD_OFF 52
 
 Servo leftMotor;
 Servo rightMotor;
 
 bool isLeftMotorAttached;
 bool isRightMotorAttached;
+
 
 /**
  * Serial-related functions
@@ -92,12 +94,6 @@ void executeGetLeftIR() {
 void executeGetRightIR() {
   unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
   writeInteger(sensorRightState);
-};
-
-void executeGetBattery() {
-  unsigned int battery = 2 * analogRead(SENSOR_BATTERY_PIN);
-  unsigned int mappedBattery = map(battery, 0, 1023, 0, 4200);
-  Serial.print(mappedBattery);
 };
 
 void executeGetSonar() {
@@ -181,10 +177,6 @@ void loop() {
       }
       case COMMAND_GET_SONAR: {
         executeGetSonar();
-        break;
-      }
-      case COMMAND_GET_BATTERY: {
-        executeGetBattery();
         break;
       }
       case COMMAND_TURN_LEAD_ON: {
