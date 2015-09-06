@@ -45,11 +45,16 @@
 
 #define SERVER_BAUD 57600
 
-#define COMMAND_TURN_LEAD_ON  1
-#define COMMAND_TURN_LEAD_OFF 2
-#define COMMAND_GET_BATTERY   3
-#define COMMAND_GET_IR        4
-#define COMMAND_GET_SONAR     5
+// 1-50: Get sensor information
+#define COMMAND_GET_BOTH_IR    1
+#define COMMAND_GET_LEFT_IR    2
+#define COMMAND_GET_RIGHT_IR   3
+#define COMMAND_GET_SONAR      4
+#define COMMAND_GET_BATTERY    5
+
+// 51-100: Use an actuator
+#define COMMAND_TURN_LEAD_ON  51
+#define COMMAND_TURN_LEAD_OFF 22
 
 Servo leftMotor;
 Servo rightMotor;
@@ -57,20 +62,36 @@ Servo rightMotor;
 bool isLeftMotorAttached;
 bool isRightMotorAttached;
 
-void executeTurnLeadOn() {
-  digitalWrite(LED_PIN, HIGH);
+/**
+ * Serial-related functions
+ */
+
+// Send a 10-bit integer down the wire, which we need to
+// map to two-bytes.
+void writeInteger(int value) {
+  Serial.write(lowByte(value));
+  Serial.write(highByte(value));
 };
 
-void executeTurnLeadOff() {
-  digitalWrite(LED_PIN, LOW);
-};
+/**
+ * RoDI primitives
+ */
 
-void executeGetIR() {
+void executeGetBothIR() {
   unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
   unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-  char responseContent[SERVER_BUFFER_SMALL];
-  sprintf(responseContent, "[%u, %u]", sensorLeftState, sensorRightState);
-  Serial.print(responseContent);
+  writeInteger(sensorLeftState);
+  writeInteger(sensorRightState);
+};
+
+void executeGetLeftIR() {
+  unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
+  writeInteger(sensorLeftState);
+};
+
+void executeGetRightIR() {
+  unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
+  writeInteger(sensorRightState);
 };
 
 void executeGetBattery() {
@@ -80,8 +101,6 @@ void executeGetBattery() {
 };
 
 void executeGetSonar() {
-  char responseContent[SERVER_BUFFER_SMALL];
-
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
   delayMicroseconds(SONAR_SHORT_DELAY);
 
@@ -91,11 +110,20 @@ void executeGetSonar() {
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
   float sonarDuration = (float) pulseIn(SONAR_ECHO_PIN, HIGH);
   long sonarDistance = sonarDuration / SONAR_MAGIC_NUMBER;
+
   if (sonarDistance > SONAR_MAX_DISTANCE) {
     sonarDistance = SONAR_MAX_DISTANCE;
   }
-  sprintf(responseContent, "%ld", sonarDistance);
-  Serial.print(responseContent);
+
+  Serial.write(sonarDistance);
+};
+
+void executeTurnLeadOn() {
+  digitalWrite(LED_PIN, HIGH);
+};
+
+void executeTurnLeadOff() {
+  digitalWrite(LED_PIN, LOW);
 };
 
 /*
@@ -139,6 +167,26 @@ void loop() {
   if (Serial.available() > 0) {
     commandByte = Serial.read();
     switch (commandByte) {
+      case COMMAND_GET_BOTH_IR: {
+        executeGetBothIR();
+        break;
+      }
+      case COMMAND_GET_LEFT_IR: {
+        executeGetLeftIR();
+        break;
+      }
+      case COMMAND_GET_RIGHT_IR: {
+        executeGetRightIR();
+        break;
+      }
+      case COMMAND_GET_SONAR: {
+        executeGetSonar();
+        break;
+      }
+      case COMMAND_GET_BATTERY: {
+        executeGetBattery();
+        break;
+      }
       case COMMAND_TURN_LEAD_ON: {
         executeTurnLeadOn();
         break;
@@ -147,19 +195,6 @@ void loop() {
         executeTurnLeadOff();
         break;
       }
-      case COMMAND_GET_IR: {
-        executeGetIR();
-        break;
-      }
-      case COMMAND_GET_BATTERY: {
-        executeGetBattery();
-        break;
-      }
-      case COMMAND_GET_SONAR: {
-        executeGetSonar();
-        break;
-      }
     }
   }
 }
-
