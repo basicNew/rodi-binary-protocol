@@ -91,11 +91,9 @@ void executeGetSonar() {
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
   float sonarDuration = (float) pulseIn(SONAR_ECHO_PIN, HIGH);
   long sonarDistance = sonarDuration / SONAR_MAGIC_NUMBER;
-/*
   if (sonarDistance > SONAR_MAX_DISTANCE) {
     sonarDistance = SONAR_MAX_DISTANCE;
   }
-*/
   sprintf(responseContent, "%ld", sonarDistance);
   Serial.print(responseContent);
 };
