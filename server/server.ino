@@ -20,11 +20,6 @@
 
 #include <Servo.h>
 
-#define SERVER_BUFFER_BIG 256
-#define SERVER_BUFFER_SMALL 32
-
-#define SENSOR_BATTERY_PIN A1
-
 #define SENSOR_RIGHT_PIN A6
 #define SENSOR_LEFT_PIN A3
 
@@ -32,7 +27,6 @@
 
 #define SERVO_RIGHT_PIN 6
 #define SERVO_LEFT_PIN 5
-#define SERVO_STOP 0
 
 #define SPEAKER_PIN 2
 
@@ -53,9 +47,21 @@
 // In the TODO list:
 // #define COMMAND_GET_BATTERY    5
 
-// 51-100: Use an actuator
-#define COMMAND_TURN_LEAD_ON  51
-#define COMMAND_TURN_LEAD_OFF 52
+// 51-100: Perform low-level actions
+#define COMMAND_TURN_LEAD_ON     51
+#define COMMAND_TURN_LEAD_OFF    52
+#define COMMAND_MOVE_LEFT_SERVO  53
+#define COMMAND_MOVE_RIGHT_SERVO 54
+#define COMMAND_MOVE_SERVOS      55
+#define COMMAND_PLAY_TONE        56
+#define COMMAND_CLEAR_TONE       57
+
+
+// 101-150: Publish-subscribe
+// TBD
+
+// 151-200: High-level commands
+// TBD
 
 Servo leftMotor;
 Servo rightMotor;
@@ -69,10 +75,27 @@ bool isRightMotorAttached;
  */
 
 // Send a 10-bit integer down the wire, which we need to
-// map to two-bytes.
-void writeInteger(int value) {
-  Serial.write(lowByte(value));
+// map to two-bytes. Use MSB.
+void writeInteger(unsigned int value) {
   Serial.write(highByte(value));
+  Serial.write(lowByte(value));
+};
+
+// Read a byte from the serial port, blocking until that
+// byte is read.
+int readByteBlocking() {
+  while (!Serial.available());
+  return Serial.read();
+};
+
+// Read two bytes from the serial port, blocking until
+// they are available. Interpret the bytes as an unsigned
+// int, reading in MSB order.
+unsigned int readUnsignedIntBlocking() {
+  while (Serial.available() < 2);
+  unsigned int value = Serial.read() << 8;
+  value += Serial.read();
+  return value;
 };
 
 /**
@@ -122,17 +145,24 @@ void executeTurnLeadOff() {
   digitalWrite(LED_PIN, LOW);
 };
 
-/*
-void executeMove() {
-  // TODO: Read properly CA'2 integers.
-  int leftSpeed = Serial.read();
-  int rightSpeed = Serial.read();
-  isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, leftSpeed);
-  isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, rightSpeed);
-}
+void executeMoveLeftServo() {
+  char speed = readByteBlocking();
+  isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
+};
 
+void executeMoveRightServo() {
+  char speed = readByteBlocking();
+  isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
+};
 
-void moveMotor(Servo motor, bool isAttached, int pin, int speed) {
+void executeMoveServos() {
+  char leftSpeed = readByteBlocking();
+  char rightSpeed = readByteBlocking();
+  isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, leftSpeed, 1);
+  isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, rightSpeed, -1);
+};
+
+bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
   if (speed == 0) {
     motor.detach();
     return false;
@@ -140,10 +170,19 @@ void moveMotor(Servo motor, bool isAttached, int pin, int speed) {
   if(!isAttached){
     motor.attach(pin);
   }
-  int angularVelocity = map(speed, -100, 100, 0, 180);
+  int angularVelocity = map(speed, -100 * sign, 100 * sign, 0, 180);
   motor.write(constrain(angularVelocity, 0, 180));
-}
-*/
+  return true;
+};
+
+void executePlayTone() {
+  unsigned int frequency = readUnsignedIntBlocking();
+  tone(SPEAKER_PIN, frequency);
+};
+
+void executeClearTone() {
+  noTone(SPEAKER_PIN);
+};
 
 int commandByte = 0;
 
@@ -185,6 +224,26 @@ void loop() {
       }
       case COMMAND_TURN_LEAD_OFF: {
         executeTurnLeadOff();
+        break;
+      }
+      case COMMAND_MOVE_LEFT_SERVO: {
+        executeMoveLeftServo();
+        break;
+      }
+      case COMMAND_MOVE_RIGHT_SERVO: {
+        executeMoveRightServo();
+        break;
+      }
+      case COMMAND_MOVE_SERVOS: {
+        executeMoveServos();
+        break;
+      }
+      case COMMAND_PLAY_TONE: {
+        executePlayTone();
+        break;
+      }
+      case COMMAND_CLEAR_TONE: {
+        executeClearTone();
         break;
       }
     }
