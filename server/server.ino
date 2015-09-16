@@ -63,11 +63,42 @@
 // 151-200: High-level commands
 // TBD
 
+struct RodiHardware {
+
+  void executeTurnLeadOn() {
+  digitalWrite(LED_PIN, HIGH);
+  };
+
+  void executeTurnLeadOff() {
+    digitalWrite(LED_PIN, LOW);
+  };
+
+  void executeGetBothIR() {
+    unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
+    unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
+    writeInteger(sensorLeftState);
+    writeInteger(sensorRightState);
+  };
+  
+  void executeGetLeftIR() {
+    unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
+    writeInteger(sensorLeftState);
+  };
+  
+  void executeGetRightIR() {
+    unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
+    writeInteger(sensorRightState);
+  };
+   
+};
+
 Servo leftMotor;
 Servo rightMotor;
 
 bool isLeftMotorAttached;
 bool isRightMotorAttached;
+
+RodiHardware rodiHardware;
 
 
 /**
@@ -101,23 +132,6 @@ unsigned int readUnsignedIntBlocking() {
 /**
  * RoDI primitives
  */
-
-void executeGetBothIR() {
-  unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-  unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-  writeInteger(sensorLeftState);
-  writeInteger(sensorRightState);
-};
-
-void executeGetLeftIR() {
-  unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-  writeInteger(sensorLeftState);
-};
-
-void executeGetRightIR() {
-  unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-  writeInteger(sensorRightState);
-};
 
 void executeGetSonar() {
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
@@ -186,6 +200,10 @@ void executeClearTone() {
 
 int commandByte = 0;
 
+
+
+
+
 void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(SPEAKER_PIN, OUTPUT);
@@ -203,27 +221,27 @@ void loop() {
     commandByte = Serial.read();
     switch (commandByte) {
       case COMMAND_GET_BOTH_IR: {
-        executeGetBothIR();
+        rodiHardware.executeGetBothIR();
         break;
       }
       case COMMAND_GET_LEFT_IR: {
-        executeGetLeftIR();
+        rodiHardware.executeGetLeftIR();
         break;
       }
       case COMMAND_GET_RIGHT_IR: {
-        executeGetRightIR();
+        rodiHardware.executeGetRightIR();
         break;
       }
       case COMMAND_GET_SONAR: {
-        executeGetSonar();
+        rodiHardware.executeGetSonar();
         break;
       }
       case COMMAND_TURN_LEAD_ON: {
-        executeTurnLeadOn();
+        rodiHardware.executeTurnLeadOn();
         break;
       }
       case COMMAND_TURN_LEAD_OFF: {
-        executeTurnLeadOff();
+        rodiHardware.executeTurnLeadOff();
         break;
       }
       case COMMAND_MOVE_LEFT_SERVO: {
