@@ -73,22 +73,15 @@ struct RodiHardware {
   void executeTurnLeadOff() {
     digitalWrite(LED_PIN, LOW);
   };
-
-  void executeGetBothIR() {
+  
+  unsigned int executeGetLeftIR() {
     unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-    unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-    writeInteger(sensorLeftState);
-    writeInteger(sensorRightState);
+    return sensorLeftState;
   };
   
-  void executeGetLeftIR() {
-    unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-    writeInteger(sensorLeftState);
-  };
-  
-  void executeGetRightIR() {
+  unsigned int executeGetRightIR() {
     unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-    writeInteger(sensorRightState);
+    return sensorRightState;
   };
 
   void executePlayTone() {
@@ -191,12 +184,28 @@ bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
   return true;
 };
 
+void executeGetBothIR() {
+  unsigned int sensorLeftState = rodiHardware.executeGetLeftIR();
+  unsigned int sensorRightState = rodiHardware.executeGetRightIR();
+  writeInteger(sensorLeftState);
+  writeInteger(sensorRightState);
+};
+
+void executeGetLeftIR() {
+  writeInteger(rodiHardware.executeGetLeftIR());
+};
+
+void executeGetRightIR() {
+  writeInteger(rodiHardware.executeGetRightIR());
+};
+
+void executePlayTone() {
+  unsigned int frequency = readUnsignedIntBlocking();
+  tone(SPEAKER_PIN, frequency);
+};
+
 
 int commandByte = 0;
-
-
-
-
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);
@@ -215,15 +224,15 @@ void loop() {
     commandByte = Serial.read();
     switch (commandByte) {
       case COMMAND_GET_BOTH_IR: {
-        rodiHardware.executeGetBothIR();
+        executeGetBothIR();
         break;
       }
       case COMMAND_GET_LEFT_IR: {
-        rodiHardware.executeGetLeftIR();
+        executeGetLeftIR();
         break;
       }
       case COMMAND_GET_RIGHT_IR: {
-        rodiHardware.executeGetRightIR();
+        executeGetRightIR();
         break;
       }
       case COMMAND_GET_SONAR: {
