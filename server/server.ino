@@ -63,6 +63,7 @@
 // 151-200: High-level commands
 // TBD
 
+//===================  INICIO STRUCT  ===================
 struct RodiHardware {
 
   void executeTurnLeadOn() {
@@ -89,8 +90,17 @@ struct RodiHardware {
     unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
     writeInteger(sensorRightState);
   };
+
+  void executePlayTone() {
+    unsigned int frequency = readUnsignedIntBlocking();
+    tone(SPEAKER_PIN, frequency);
+  };
+  
+  void executeClearTone() {
+    noTone(SPEAKER_PIN);
+  };
    
-};
+};//===================  FIN STRUCT  ===================
 
 Servo leftMotor;
 Servo rightMotor;
@@ -151,14 +161,6 @@ void executeGetSonar() {
   Serial.write(sonarDistance);
 };
 
-void executeTurnLeadOn() {
-  digitalWrite(LED_PIN, HIGH);
-};
-
-void executeTurnLeadOff() {
-  digitalWrite(LED_PIN, LOW);
-};
-
 void executeMoveLeftServo() {
   char speed = readByteBlocking();
   isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
@@ -189,14 +191,6 @@ bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
   return true;
 };
 
-void executePlayTone() {
-  unsigned int frequency = readUnsignedIntBlocking();
-  tone(SPEAKER_PIN, frequency);
-};
-
-void executeClearTone() {
-  noTone(SPEAKER_PIN);
-};
 
 int commandByte = 0;
 
@@ -233,7 +227,7 @@ void loop() {
         break;
       }
       case COMMAND_GET_SONAR: {
-        rodiHardware.executeGetSonar();
+        executeGetSonar();
         break;
       }
       case COMMAND_TURN_LEAD_ON: {
@@ -257,11 +251,11 @@ void loop() {
         break;
       }
       case COMMAND_PLAY_TONE: {
-        executePlayTone();
+        rodiHardware.executePlayTone();
         break;
       }
       case COMMAND_CLEAR_TONE: {
-        executeClearTone();
+        rodiHardware.executeClearTone();
         break;
       }
     }
