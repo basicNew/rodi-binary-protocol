@@ -63,37 +63,36 @@
 // 151-200: High-level commands
 // TBD
 
-//===================  INICIO STRUCT  ===================
+//===================  START STRUCT  ===================
 struct RodiHardware {
 
-  void executeTurnLeadOn() {
+  void turnLeadOn() {
   digitalWrite(LED_PIN, HIGH);
   };
 
-  void executeTurnLeadOff() {
+  void turnLeadOff() {
     digitalWrite(LED_PIN, LOW);
   };
   
-  unsigned int executeGetLeftIR() {
+  unsigned int getLeftIR() {
     unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
     return sensorLeftState;
   };
   
-  unsigned int executeGetRightIR() {
+  unsigned int getRightIR() {
     unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
     return sensorRightState;
   };
 
-  void executePlayTone() {
-    unsigned int frequency = readUnsignedIntBlocking();
+  void playTone(unsigned int frequency) {
     tone(SPEAKER_PIN, frequency);
   };
   
-  void executeClearTone() {
+  void clearTone() {
     noTone(SPEAKER_PIN);
   };
    
-};//===================  FIN STRUCT  ===================
+};//===================  END STRUCT  ===================
 
 Servo leftMotor;
 Servo rightMotor;
@@ -102,7 +101,6 @@ bool isLeftMotorAttached;
 bool isRightMotorAttached;
 
 RodiHardware rodiHardware;
-
 
 /**
  * Serial-related functions
@@ -132,9 +130,17 @@ unsigned int readUnsignedIntBlocking() {
   return value;
 };
 
+//===================  START RoDI primitives  ===================
 /**
  * RoDI primitives
  */
+void executeTurnLeadOn() {
+  rodiHardware.turnLeadOn();
+};
+
+void executeTurnLeadOff() {
+  rodiHardware.turnLeadOff();
+};
 
 void executeGetSonar() {
   digitalWrite(SONAR_TRIGGER_PIN, LOW);
@@ -185,25 +191,29 @@ bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
 };
 
 void executeGetBothIR() {
-  unsigned int sensorLeftState = rodiHardware.executeGetLeftIR();
-  unsigned int sensorRightState = rodiHardware.executeGetRightIR();
+  unsigned int sensorLeftState = rodiHardware.getLeftIR();
+  unsigned int sensorRightState = rodiHardware.getRightIR();
   writeInteger(sensorLeftState);
   writeInteger(sensorRightState);
 };
 
 void executeGetLeftIR() {
-  writeInteger(rodiHardware.executeGetLeftIR());
+  writeInteger(rodiHardware.getLeftIR());
 };
 
 void executeGetRightIR() {
-  writeInteger(rodiHardware.executeGetRightIR());
+  writeInteger(rodiHardware.getRightIR());
 };
 
 void executePlayTone() {
   unsigned int frequency = readUnsignedIntBlocking();
-  tone(SPEAKER_PIN, frequency);
+  rodiHardware.playTone(frequency);
 };
 
+void executeClearTone() {
+  rodiHardware.clearTone();
+};
+//===================  END RoDI primitives  ===================
 
 int commandByte = 0;
 
@@ -223,6 +233,7 @@ void loop() {
   if (Serial.available() > 0) {
     commandByte = Serial.read();
     switch (commandByte) {
+
       case COMMAND_GET_BOTH_IR: {
         executeGetBothIR();
         break;
@@ -240,11 +251,11 @@ void loop() {
         break;
       }
       case COMMAND_TURN_LEAD_ON: {
-        rodiHardware.executeTurnLeadOn();
+        executeTurnLeadOn();
         break;
       }
       case COMMAND_TURN_LEAD_OFF: {
-        rodiHardware.executeTurnLeadOff();
+        executeTurnLeadOff();
         break;
       }
       case COMMAND_MOVE_LEFT_SERVO: {
@@ -260,11 +271,11 @@ void loop() {
         break;
       }
       case COMMAND_PLAY_TONE: {
-        rodiHardware.executePlayTone();
+        executePlayTone();
         break;
       }
       case COMMAND_CLEAR_TONE: {
-        rodiHardware.executeClearTone();
+        executeClearTone();
         break;
       }
     }
