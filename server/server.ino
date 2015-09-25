@@ -63,8 +63,15 @@
 // 151-200: High-level commands
 // TBD
 
-//===================  START STRUCT  ===================
+
 struct RodiHardware {
+
+
+  Servo leftMotor;
+  Servo rightMotor;
+
+  bool isLeftMotorAttached = false;
+  bool isRightMotorAttached = false;
 
   void turnLeadOn() {
   digitalWrite(LED_PIN, HIGH);
@@ -91,6 +98,14 @@ struct RodiHardware {
   void clearTone() {
     noTone(SPEAKER_PIN);
   };
+
+  void moveLeftServo(char speed){
+    isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
+  }  
+
+  void moveRightServo(char speed){
+    isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
+  } 
    
   bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
     if (speed == 0) {
@@ -123,13 +138,7 @@ struct RodiHardware {
     return sonarDistance;
   };
 
-};//===================  END STRUCT  ===================
-
-Servo leftMotor;
-Servo rightMotor;
-
-bool isLeftMotorAttached;
-bool isRightMotorAttached;
+};
 
 RodiHardware rodiHardware;
 
@@ -161,7 +170,6 @@ unsigned int readUnsignedIntBlocking() {
   return value;
 };
 
-//===================  START RoDI primitives  ===================
 /**
  * RoDI primitives
  */
@@ -180,19 +188,19 @@ void executeGetSonar() {
 
 void executeMoveLeftServo() {
   char speed = readByteBlocking();
-  isLeftMotorAttached = rodiHardware.moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
+  rodiHardware.moveLeftServo(speed);
 };
 
 void executeMoveRightServo() {
   char speed = readByteBlocking();
-  isRightMotorAttached = rodiHardware.moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
+  rodiHardware.moveRightServo(speed);
 };
 
 void executeMoveServos() {
   char leftSpeed = readByteBlocking();
   char rightSpeed = readByteBlocking();
-  isLeftMotorAttached = rodiHardware.moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, leftSpeed, 1);
-  isRightMotorAttached = rodiHardware.moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, rightSpeed, -1);
+  rodiHardware.moveLeftServo(leftSpeed);
+  rodiHardware.moveRightServo(rightSpeed);
 };
 
 void executeGetBothIR() {
@@ -218,7 +226,6 @@ void executePlayTone() {
 void executeClearTone() {
   rodiHardware.clearTone();
 };
-//===================  END RoDI primitives  ===================
 
 int commandByte = 0;
 
@@ -227,9 +234,6 @@ void setup() {
   pinMode(SPEAKER_PIN, OUTPUT);
   pinMode(SONAR_TRIGGER_PIN, OUTPUT);
   pinMode(SONAR_ECHO_PIN, INPUT);
-
-  isLeftMotorAttached = false;
-  isRightMotorAttached = false;
 
   Serial.begin(SERVER_BAUD);
 }
