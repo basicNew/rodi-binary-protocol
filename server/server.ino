@@ -70,8 +70,18 @@ struct RodiHardware {
   Servo leftMotor;
   Servo rightMotor;
 
-  bool isLeftMotorAttached = false;
-  bool isRightMotorAttached = false;
+  bool isLeftMotorAttached ;
+  bool isRightMotorAttached ;
+
+  void initialize(){
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(SPEAKER_PIN, OUTPUT);
+    pinMode(SONAR_TRIGGER_PIN, OUTPUT);
+    pinMode(SONAR_ECHO_PIN, INPUT);
+
+    isLeftMotorAttached = false;
+    isRightMotorAttached = false;
+  };
 
   void turnLeadOn() {
   digitalWrite(LED_PIN, HIGH);
@@ -230,11 +240,8 @@ void executeClearTone() {
 int commandByte = 0;
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(SONAR_TRIGGER_PIN, OUTPUT);
-  pinMode(SONAR_ECHO_PIN, INPUT);
-
+  
+  rodiHardware.initialize();
   Serial.begin(SERVER_BAUD);
 }
 
