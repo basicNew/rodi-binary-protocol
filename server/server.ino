@@ -63,12 +63,94 @@
 // 151-200: High-level commands
 // TBD
 
-Servo leftMotor;
-Servo rightMotor;
 
-bool isLeftMotorAttached;
-bool isRightMotorAttached;
+struct RodiHardware {
 
+
+  Servo leftMotor;
+  Servo rightMotor;
+
+  bool isLeftMotorAttached ;
+  bool isRightMotorAttached ;
+
+  void initialize(){
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(SPEAKER_PIN, OUTPUT);
+    pinMode(SONAR_TRIGGER_PIN, OUTPUT);
+    pinMode(SONAR_ECHO_PIN, INPUT);
+
+    isLeftMotorAttached = false;
+    isRightMotorAttached = false;
+  };
+
+  void turnLeadOn() {
+  digitalWrite(LED_PIN, HIGH);
+  };
+
+  void turnLeadOff() {
+    digitalWrite(LED_PIN, LOW);
+  };
+  
+  unsigned int getLeftIR() {
+    unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
+    return sensorLeftState;
+  };
+  
+  unsigned int getRightIR() {
+    unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
+    return sensorRightState;
+  };
+
+  void playTone(unsigned int frequency) {
+    tone(SPEAKER_PIN, frequency);
+  };
+  
+  void clearTone() {
+    noTone(SPEAKER_PIN);
+  };
+
+  void moveLeftServo(char speed){
+    isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
+  }  
+
+  void moveRightServo(char speed){
+    isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
+  } 
+   
+  bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
+    if (speed == 0) {
+      motor.detach();
+      return false;
+    }
+    if(!isAttached){
+      motor.attach(pin);
+    }
+    int angularVelocity = map(speed, -100 * sign, 100 * sign, 0, 180);
+    motor.write(constrain(angularVelocity, 0, 180));
+    return true;
+  };
+
+  long getSonar() {
+    digitalWrite(SONAR_TRIGGER_PIN, LOW);
+    delayMicroseconds(SONAR_SHORT_DELAY);
+  
+    digitalWrite(SONAR_TRIGGER_PIN, HIGH);
+    delayMicroseconds(SONAR_LONG_DELAY);
+  
+    digitalWrite(SONAR_TRIGGER_PIN, LOW);
+    float sonarDuration = (float) pulseIn(SONAR_ECHO_PIN, HIGH);
+    long sonarDistance = sonarDuration / SONAR_MAGIC_NUMBER;
+  
+    if (sonarDistance > SONAR_MAX_DISTANCE) {
+      sonarDistance = SONAR_MAX_DISTANCE;
+    }
+  
+    return sonarDistance;
+  };
+
+};
+
+RodiHardware rodiHardware;
 
 /**
  * Serial-related functions
@@ -101,100 +183,65 @@ unsigned int readUnsignedIntBlocking() {
 /**
  * RoDI primitives
  */
-
-void executeGetBothIR() {
-  unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-  unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-  writeInteger(sensorLeftState);
-  writeInteger(sensorRightState);
-};
-
-void executeGetLeftIR() {
-  unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
-  writeInteger(sensorLeftState);
-};
-
-void executeGetRightIR() {
-  unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
-  writeInteger(sensorRightState);
-};
-
-void executeGetSonar() {
-  digitalWrite(SONAR_TRIGGER_PIN, LOW);
-  delayMicroseconds(SONAR_SHORT_DELAY);
-
-  digitalWrite(SONAR_TRIGGER_PIN, HIGH);
-  delayMicroseconds(SONAR_LONG_DELAY);
-
-  digitalWrite(SONAR_TRIGGER_PIN, LOW);
-  float sonarDuration = (float) pulseIn(SONAR_ECHO_PIN, HIGH);
-  long sonarDistance = sonarDuration / SONAR_MAGIC_NUMBER;
-
-  if (sonarDistance > SONAR_MAX_DISTANCE) {
-    sonarDistance = SONAR_MAX_DISTANCE;
-  }
-
-  Serial.write(sonarDistance);
-};
-
 void executeTurnLeadOn() {
-  digitalWrite(LED_PIN, HIGH);
+  rodiHardware.turnLeadOn();
 };
 
 void executeTurnLeadOff() {
-  digitalWrite(LED_PIN, LOW);
+  rodiHardware.turnLeadOff();
+};
+
+void executeGetSonar() {
+  long sonarDistance = rodiHardware.getSonar();
+  Serial.write(sonarDistance);
 };
 
 void executeMoveLeftServo() {
   char speed = readByteBlocking();
-  isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
+  rodiHardware.moveLeftServo(speed);
 };
 
 void executeMoveRightServo() {
   char speed = readByteBlocking();
-  isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
+  rodiHardware.moveRightServo(speed);
 };
 
 void executeMoveServos() {
   char leftSpeed = readByteBlocking();
   char rightSpeed = readByteBlocking();
-  isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, leftSpeed, 1);
-  isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, rightSpeed, -1);
+  rodiHardware.moveLeftServo(leftSpeed);
+  rodiHardware.moveRightServo(rightSpeed);
 };
 
-bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
-  if (speed == 0) {
-    motor.detach();
-    return false;
-  }
-  if(!isAttached){
-    motor.attach(pin);
-  }
-  int angularVelocity = map(speed, -100 * sign, 100 * sign, 0, 180);
-  motor.write(constrain(angularVelocity, 0, 180));
-  return true;
+void executeGetBothIR() {
+  unsigned int sensorLeftState = rodiHardware.getLeftIR();
+  unsigned int sensorRightState = rodiHardware.getRightIR();
+  writeInteger(sensorLeftState);
+  writeInteger(sensorRightState);
+};
+
+void executeGetLeftIR() {
+  writeInteger(rodiHardware.getLeftIR());
+};
+
+void executeGetRightIR() {
+  writeInteger(rodiHardware.getRightIR());
 };
 
 void executePlayTone() {
   unsigned int frequency = readUnsignedIntBlocking();
-  tone(SPEAKER_PIN, frequency);
+  rodiHardware.playTone(frequency);
 };
 
 void executeClearTone() {
-  noTone(SPEAKER_PIN);
+  rodiHardware.clearTone();
 };
 
 int commandByte = 0;
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(SPEAKER_PIN, OUTPUT);
-  pinMode(SONAR_TRIGGER_PIN, OUTPUT);
-  pinMode(SONAR_ECHO_PIN, INPUT);
-
-  isLeftMotorAttached = false;
-  isRightMotorAttached = false;
-
+  
+  rodiHardware.initialize();
   Serial.begin(SERVER_BAUD);
 }
 
@@ -202,6 +249,7 @@ void loop() {
   if (Serial.available() > 0) {
     commandByte = Serial.read();
     switch (commandByte) {
+
       case COMMAND_GET_BOTH_IR: {
         executeGetBothIR();
         break;
