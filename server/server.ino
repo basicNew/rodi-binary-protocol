@@ -64,13 +64,15 @@
 // TBD
 
 
-struct RodiHardware {
+class RodiHardware {
 
   Servo leftMotor;
   Servo rightMotor;
 
   bool isLeftMotorAttached ;
   bool isRightMotorAttached ;
+
+public:
 
   RodiHardware(){
     pinMode(LED_PIN, OUTPUT);
@@ -116,19 +118,6 @@ struct RodiHardware {
     isRightMotorAttached = moveMotor(rightMotor, isRightMotorAttached, SERVO_RIGHT_PIN, speed, -1);
   };
 
-  bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
-    if (speed == 0) {
-      motor.detach();
-      return false;
-    }
-    if(!isAttached){
-      motor.attach(pin);
-    }
-    int angularVelocity = map(speed, -100 * sign, 100 * sign, 0, 180);
-    motor.write(constrain(angularVelocity, 0, 180));
-    return true;
-  };
-
   long getSonar() {
     digitalWrite(SONAR_TRIGGER_PIN, LOW);
     delayMicroseconds(SONAR_SHORT_DELAY);
@@ -145,6 +134,21 @@ struct RodiHardware {
     }
 
     return sonarDistance;
+  };
+
+protected:
+
+    bool moveMotor(Servo motor, bool isAttached, int pin, int speed, int sign) {
+    if (speed == 0) {
+      motor.detach();
+      return false;
+    }
+    if(!isAttached){
+      motor.attach(pin);
+    }
+    int angularVelocity = map(speed, -100 * sign, 100 * sign, 0, 180);
+    motor.write(constrain(angularVelocity, 0, 180));
+    return true;
   };
 
 };
