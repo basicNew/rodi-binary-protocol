@@ -21,17 +21,19 @@
 #include <Servo.h>
 
 #define SENSOR_RIGHT_PIN A6
-#define SENSOR_LEFT_PIN A3
+#define SENSOR_LEFT_PIN A1
+
+#define SENSOR_LIGHT_PIN A7
 
 #define LED_PIN 13
 
-#define SERVO_RIGHT_PIN 6
-#define SERVO_LEFT_PIN 5
+#define SERVO_RIGHT_PIN 5
+#define SERVO_LEFT_PIN 4
 
-#define SPEAKER_PIN 2
+#define SPEAKER_PIN 7
 
 #define SONAR_ECHO_PIN A0
-#define SONAR_TRIGGER_PIN A2
+#define SONAR_TRIGGER_PIN 12
 #define SONAR_SHORT_DELAY 2
 #define SONAR_LONG_DELAY 10
 #define SONAR_MAX_DISTANCE 100
@@ -40,21 +42,22 @@
 #define SERVER_BAUD 57600
 
 // 1-50: Get sensor information
-#define COMMAND_GET_BOTH_IR    1
-#define COMMAND_GET_LEFT_IR    2
-#define COMMAND_GET_RIGHT_IR   3
-#define COMMAND_GET_SONAR      4
+#define COMMAND_GET_BOTH_IR    2
+//#define COMMAND_GET_LEFT_IR    1
+//#define COMMAND_GET_RIGHT_IR   3
+#define COMMAND_GET_SONAR      5
+#define COMMAND_GET_LIGHT      7
 // In the TODO list:
 // #define COMMAND_GET_BATTERY    5
 
 // 51-100: Perform low-level actions
-#define COMMAND_TURN_LEAD_ON     51
-#define COMMAND_TURN_LEAD_OFF    52
-#define COMMAND_MOVE_LEFT_SERVO  53
-#define COMMAND_MOVE_RIGHT_SERVO 54
-#define COMMAND_MOVE_SERVOS      55
-#define COMMAND_PLAY_TONE        56
-#define COMMAND_CLEAR_TONE       57
+//#define COMMAND_TURN_LEAD_ON     51
+//#define COMMAND_TURN_LEAD_OFF    52
+//#define COMMAND_MOVE_LEFT_SERVO  53
+//#define COMMAND_MOVE_RIGHT_SERVO 54
+#define COMMAND_MOVE_SERVOS      3
+//#define COMMAND_PLAY_TONE        4
+//#define COMMAND_CLEAR_TONE       57
 
 
 // 101-150: Publish-subscribe
@@ -100,6 +103,11 @@ public:
   unsigned int getRightIR() {
     unsigned int sensorRightState = analogRead(SENSOR_RIGHT_PIN);
     return sensorRightState;
+  };
+
+  unsigned int getLight() {
+    unsigned int sensorLightIntensity = analogRead(SENSOR_LIGHT_PIN);
+    return sensorLightIntensity;
   };
 
   void playTone(unsigned int frequency) {
@@ -231,6 +239,9 @@ void executeGetRightIR() {
   writeInteger(rodi.getRightIR());
 };
 
+void executeGetLight() {
+  writeInteger(rodi.getLight());
+};
 void executePlayTone() {
   unsigned int frequency = readUnsignedIntBlocking();
   rodi.playTone(frequency);
@@ -255,7 +266,19 @@ void loop() {
         executeGetBothIR();
         break;
       }
-      case COMMAND_GET_LEFT_IR: {
+      case COMMAND_GET_SONAR: {
+        executeGetSonar();
+        break;
+      }
+      case COMMAND_GET_LIGHT: {
+        executeGetLight();
+        break;        
+      }
+      case COMMAND_MOVE_SERVOS: {
+        executeMoveServos();
+        break;
+      }
+      /*case COMMAND_GET_LEFT_IR: {
         executeGetLeftIR();
         break;
       }
@@ -263,10 +286,7 @@ void loop() {
         executeGetRightIR();
         break;
       }
-      case COMMAND_GET_SONAR: {
-        executeGetSonar();
-        break;
-      }
+
       case COMMAND_TURN_LEAD_ON: {
         executeTurnLeadOn();
         break;
@@ -283,10 +303,7 @@ void loop() {
         executeMoveRightServo();
         break;
       }
-      case COMMAND_MOVE_SERVOS: {
-        executeMoveServos();
-        break;
-      }
+
       case COMMAND_PLAY_TONE: {
         executePlayTone();
         break;
@@ -294,7 +311,7 @@ void loop() {
       case COMMAND_CLEAR_TONE: {
         executeClearTone();
         break;
-      }
+      }*/
     }
   }
 }
