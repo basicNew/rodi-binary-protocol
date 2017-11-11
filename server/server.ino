@@ -19,12 +19,14 @@
  */
 
 #include <Servo.h>
+#include <Adafruit_NeoPixel.h>
 
 #define SENSOR_RIGHT_PIN A6
 #define SENSOR_LEFT_PIN A1
 
 #define SENSOR_LIGHT_PIN A7
 
+#define PIXEL_PIN 11
 #define LED_PIN 13
 
 #define SERVO_RIGHT_PIN 5
@@ -41,30 +43,13 @@
 
 #define SERVER_BAUD 57600
 
-// 1-50: Get sensor information
-#define COMMAND_GET_BOTH_IR    2
-//#define COMMAND_GET_LEFT_IR    1
-//#define COMMAND_GET_RIGHT_IR   3
-#define COMMAND_GET_SONAR      5
-#define COMMAND_GET_LIGHT      7
-// In the TODO list:
-// #define COMMAND_GET_BATTERY    5
-
-// 51-100: Perform low-level actions
-//#define COMMAND_TURN_LEAD_ON     51
-//#define COMMAND_TURN_LEAD_OFF    52
-//#define COMMAND_MOVE_LEFT_SERVO  53
-//#define COMMAND_MOVE_RIGHT_SERVO 54
-#define COMMAND_MOVE_SERVOS      3
-//#define COMMAND_PLAY_TONE        4
-//#define COMMAND_CLEAR_TONE       57
-
-
-// 101-150: Publish-subscribe
-// TBD
-
-// 151-200: High-level commands
-// TBD
+#define COMMAND_GET_IR      2
+#define COMMAND_MOVE_SERVOS 3
+#define COMMAND_SING        4
+#define COMMAND_GET_SONAR   5
+#define COMMAND_SET_PIXEL   6
+#define COMMAND_GET_LIGHT   7
+#define COMMAND_SET_LED     8
 
 
 class RodiHardware {
@@ -74,6 +59,8 @@ class RodiHardware {
 
   bool isLeftMotorAttached ;
   bool isRightMotorAttached ;
+
+  Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 public:
 
@@ -85,15 +72,14 @@ public:
 
     isLeftMotorAttached = false;
     isRightMotorAttached = false;
+
+    pixel.begin();
   };
 
-  void turnLeadOn() {
-    digitalWrite(LED_PIN, HIGH);
-  };
-
-  void turnLeadOff() {
-    digitalWrite(LED_PIN, LOW);
-  };
+  void setPixel(char red, char green, char blue) {
+    pixel.setPixelColor(0, pixel.Color(red, green, blue));
+    pixel.show();
+  }
 
   unsigned int getLeftIR() {
     unsigned int sensorLeftState = analogRead(SENSOR_LEFT_PIN);
@@ -110,14 +96,13 @@ public:
     return sensorLightIntensity;
   };
 
-  void playTone(unsigned int frequency) {
-    tone(SPEAKER_PIN, frequency);
+  void playTone(unsigned int frequency, unsigned int duration) {
+    tone(SPEAKER_PIN, frequency, duration);
   };
 
-  void clearTone() {
-    noTone(SPEAKER_PIN);
-  };
-
+  void setLed(char isOn) {
+    digitalWrite(LED_PIN, isOn);
+  }
   void moveLeftServo(char speed){
     isLeftMotorAttached = moveMotor(leftMotor, isLeftMotorAttached, SERVO_LEFT_PIN, speed, 1);
   };
@@ -174,13 +159,6 @@ void writeInteger(unsigned int value) {
   Serial.write(lowByte(value));
 };
 
-// Read a byte from the serial port, blocking until that
-// byte is read.
-int readByteBlocking() {
-  while (!Serial.available());
-  return Serial.read();
-};
-
 // Read two bytes from the serial port, blocking until
 // they are available. Interpret the bytes as an unsigned
 // int, reading in MSB order.
@@ -194,12 +172,11 @@ unsigned int readUnsignedIntBlocking() {
 /**
  * RoDI primitives
  */
-void executeTurnLeadOn() {
-  rodi.turnLeadOn();
-};
 
-void executeTurnLeadOff() {
-  rodi.turnLeadOff();
+void executeSing() {
+  unsigned int frequency = readUnsignedIntBlocking();
+  unsigned int duration = readUnsignedIntBlocking();
+  rodi.playTone(frequency, duration);
 };
 
 void executeGetSonar() {
@@ -207,111 +184,81 @@ void executeGetSonar() {
   Serial.write(sonarDistance);
 };
 
-void executeMoveLeftServo() {
-  char speed = readByteBlocking();
-  rodi.moveLeftServo(speed);
-};
-
-void executeMoveRightServo() {
-  char speed = readByteBlocking();
-  rodi.moveRightServo(speed);
-};
+void executeSetPixel() {
+  char red = readUnsignedIntBlocking();
+  char green = readUnsignedIntBlocking();
+  char blue = readUnsignedIntBlocking();
+  rodi.setPixel(red, green, blue);
+}
 
 void executeMoveServos() {
-  char leftSpeed = readByteBlocking();
-  char rightSpeed = readByteBlocking();
+  char leftSpeed = readUnsignedIntBlocking();
+  char rightSpeed = readUnsignedIntBlocking();
   rodi.moveLeftServo(leftSpeed);
   rodi.moveRightServo(rightSpeed);
 };
 
-void executeGetBothIR() {
+void executeGetIR() {
   unsigned int sensorLeftState = rodi.getLeftIR();
   unsigned int sensorRightState = rodi.getRightIR();
   writeInteger(sensorLeftState);
   writeInteger(sensorRightState);
 };
 
-void executeGetLeftIR() {
-  writeInteger(rodi.getLeftIR());
-};
-
-void executeGetRightIR() {
-  writeInteger(rodi.getRightIR());
-};
-
 void executeGetLight() {
   writeInteger(rodi.getLight());
 };
-void executePlayTone() {
-  unsigned int frequency = readUnsignedIntBlocking();
-  rodi.playTone(frequency);
-};
 
-void executeClearTone() {
-  rodi.clearTone();
-};
+void executeSetLed() {
+  char isOn = readUnsignedIntBlocking();
+  rodi.setLed(isOn);
+}
 
 int commandByte = 0;
 
 void setup() {
   Serial.begin(SERVER_BAUD);
+  digitalWrite(LED_PIN, 1);
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    commandByte = Serial.read();
-    switch (commandByte) {
 
-      case COMMAND_GET_BOTH_IR: {
-        executeGetBothIR();
+  if (Serial.available() > 0) {
+
+    commandByte = readUnsignedIntBlocking();
+
+    switch (commandByte) {
+      case COMMAND_GET_IR: {
+        executeGetIR();
+        break;
+      }
+      case COMMAND_MOVE_SERVOS: {
+        executeMoveServos();
+        break;
+      }
+      case COMMAND_SING: {
+        executeSing();
         break;
       }
       case COMMAND_GET_SONAR: {
         executeGetSonar();
         break;
       }
+      case COMMAND_SET_PIXEL: {
+        executeSetPixel();
+        break;
+      }
       case COMMAND_GET_LIGHT: {
         executeGetLight();
-        break;        
-      }
-      case COMMAND_MOVE_SERVOS: {
-        executeMoveServos();
         break;
       }
-      /*case COMMAND_GET_LEFT_IR: {
-        executeGetLeftIR();
+      case COMMAND_SET_LED: {
+        executeSetLed();
         break;
       }
-      case COMMAND_GET_RIGHT_IR: {
-        executeGetRightIR();
+      default: {
         break;
       }
-
-      case COMMAND_TURN_LEAD_ON: {
-        executeTurnLeadOn();
-        break;
-      }
-      case COMMAND_TURN_LEAD_OFF: {
-        executeTurnLeadOff();
-        break;
-      }
-      case COMMAND_MOVE_LEFT_SERVO: {
-        executeMoveLeftServo();
-        break;
-      }
-      case COMMAND_MOVE_RIGHT_SERVO: {
-        executeMoveRightServo();
-        break;
-      }
-
-      case COMMAND_PLAY_TONE: {
-        executePlayTone();
-        break;
-      }
-      case COMMAND_CLEAR_TONE: {
-        executeClearTone();
-        break;
-      }*/
     }
   }
 }
