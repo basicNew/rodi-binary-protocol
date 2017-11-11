@@ -30,15 +30,21 @@ This library implements a binary protocol, where every command is specified by o
 - **Parameters**: None.
 - **Returns**: Two numbers from 0 to 1024, sent as four bytes (2-bytes each number) in MSB order.
 
-#### Read left IR sensors
+#### Read left IR sensor
 - **Description**: Reads the left IR sensor placed at the bottom of the robot.
 - **Command code**: `2`
 - **Parameters**: None.
 - **Returns**: Number from 0 to 1024, sent as two bytes in MSB order.
 
-#### Read right IR sensors
+#### Read right IR sensor
 - **Description**: Reads the right IR sensor placed at the bottom of the robot.
 - **Command code**: `3`
+- **Parameters**: None.
+- **Returns**: Number from 0 to 1024, sent as two bytes in MSB order.
+
+#### Read light sensor
+- **Description**: Reads the light sensor placed at the bottom of the robot.
+- **Command code**: `5`
 - **Parameters**: None.
 - **Returns**: Number from 0 to 1024, sent as two bytes in MSB order.
 
